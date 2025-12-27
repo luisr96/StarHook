@@ -3,7 +3,9 @@ package com.f2pstarhunter.starhook.repository;
 import com.f2pstarhunter.starhook.model.PoofEvent;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Modifying;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -22,4 +24,12 @@ public interface PoofEventRepository extends JpaRepository<PoofEvent, Long> {
 
     // Get poof events within a time range
     List<PoofEvent> findByPoofedAtBetween(LocalDateTime start, LocalDateTime end);
+
+    @Query("SELECT TIMESTAMPDIFF(MINUTE, p.firstSeenAt, p.poofedAt) FROM PoofEvent p")
+    List<Long> findAllLifespansInMinutes();
+
+    // Delete poof events older than the given time
+    @Modifying
+    @Query("DELETE FROM PoofEvent p WHERE p.poofedAt < :expiryTime")
+    int deleteByPoofedAtBefore(@Param("expiryTime") LocalDateTime expiryTime);
 }

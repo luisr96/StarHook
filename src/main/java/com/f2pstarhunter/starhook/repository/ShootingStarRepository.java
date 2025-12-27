@@ -2,6 +2,9 @@ package com.f2pstarhunter.starhook.repository;
 
 import com.f2pstarhunter.starhook.model.ShootingStar;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -16,4 +19,8 @@ public interface ShootingStarRepository extends JpaRepository<ShootingStar, Long
     List<ShootingStar> findByLastUpdatedAtAfter(LocalDateTime dateTime);
 
     List<ShootingStar> findTop10ByOrderByLastUpdatedAtDesc();
+
+    @Modifying
+    @Query("DELETE FROM ShootingStar s WHERE s.firstSeenAt < :expiryTime")
+    int deleteByFirstSeenAtBefore(@Param("expiryTime") LocalDateTime expiryTime);
 }
