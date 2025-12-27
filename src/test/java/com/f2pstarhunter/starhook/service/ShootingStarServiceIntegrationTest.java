@@ -1,6 +1,8 @@
 package com.f2pstarhunter.starhook.service;
 
+import com.f2pstarhunter.starhook.model.PoofEvent;
 import com.f2pstarhunter.starhook.model.ShootingStar;
+import com.f2pstarhunter.starhook.repository.PoofEventRepository;
 import com.f2pstarhunter.starhook.repository.ShootingStarRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,7 +11,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -26,9 +30,13 @@ class ShootingStarServiceIntegrationTest {
     @Autowired
     private ShootingStarRepository repository;
 
+    @Autowired
+    private PoofEventRepository poofEventRepository;
+
     @BeforeEach
     void setUp() {
         repository.deleteAll();
+        poofEventRepository.deleteAll();
     }
 
     @Test
@@ -202,6 +210,58 @@ class ShootingStarServiceIntegrationTest {
         });
 
         assertTrue(exception.getMessage().contains("No star found on world 454"));
+    }
+
+    @Test
+    void testProcessStarDisappearanceRecordsPoofEvent() throws Exception {
+        // Create a star first
+        Map<String, String> params1 = createWebhookParams("T5 W444 vb");
+        service.processWebhook(params1);
+
+        ShootingStar star = repository.findByWorld(444).orElseThrow();
+        LocalDateTime firstSeenAt = star.getFirstSeenAt();
+
+        // Small delay to ensure different timestamp
+        Thread.sleep(10);
+
+        // Mark as disappeared
+        Map<String, String> params2 = createWebhookParams("W444 poof");
+        service.processWebhook(params2);
+
+        // Star should be deleted from active tracking
+        assertFalse(repository.findByWorld(444).isPresent());
+
+        // But poof event should be recorded
+        List<PoofEvent> poofEvents = poofEventRepository.findByWorld(444);
+        assertEquals(1, poofEvents.size());
+
+        PoofEvent event = poofEvents.get(0);
+        assertEquals(444, event.getWorld());
+        assertEquals(5, event.getTier());
+        assertEquals("vb", event.getLocation());
+        assertEquals(firstSeenAt, event.getFirstSeenAt());
+        assertNotNull(event.getPoofedAt());
+    }
+
+    @Test
+    void testMultiplePoofEventsRecorded() throws Exception {
+        // Create and poof multiple stars
+        service.processWebhook(createWebhookParams("T7 W420 dray"));
+        service.processWebhook(createWebhookParams("420 poof"));
+
+        service.processWebhook(createWebhookParams("T3 W301 lse"));
+        service.processWebhook(createWebhookParams("W301 poof"));
+
+        // Another star appears in the same world as another
+        // It should be recorded as well instead of replaced
+        service.processWebhook(createWebhookParams("T9 W420 ccb"));
+        service.processWebhook(createWebhookParams("W420 poof"));
+
+        // No active stars
+        assertEquals(0, repository.count());
+
+        // But 3 poof events recorded
+        assertEquals(3, poofEventRepository.count());
     }
 
     private Map<String, String> createWebhookParams(String message) {

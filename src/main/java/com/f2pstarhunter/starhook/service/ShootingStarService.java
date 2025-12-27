@@ -1,9 +1,8 @@
 package com.f2pstarhunter.starhook.service;
 
 import com.f2pstarhunter.starhook.exception.InvalidMessageException;
-import com.f2pstarhunter.starhook.model.ParsedMessage;
-import com.f2pstarhunter.starhook.model.ShootingStar;
-import com.f2pstarhunter.starhook.model.WebhookPayload;
+import com.f2pstarhunter.starhook.model.*;
+import com.f2pstarhunter.starhook.repository.PoofEventRepository;
 import com.f2pstarhunter.starhook.repository.ShootingStarRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,11 +20,17 @@ public class ShootingStarService {
     private static final Logger log = LoggerFactory.getLogger(ShootingStarService.class);
     private final ObjectMapper objectMapper;
     private final ShootingStarRepository repository;
+    private final PoofEventRepository poofEventRepository;
     private final MessageParser messageParser;
 
-    public ShootingStarService(ObjectMapper objectMapper, ShootingStarRepository repository, MessageParser messageParser) {
+    public ShootingStarService(
+            ObjectMapper objectMapper,
+            ShootingStarRepository repository,
+            PoofEventRepository poofEventRepository,
+            MessageParser messageParser) {
         this.objectMapper = objectMapper;
         this.repository = repository;
+        this.poofEventRepository = poofEventRepository;
         this.messageParser = messageParser;
     }
 
@@ -44,7 +49,6 @@ public class ShootingStarService {
             log.error("Invalid message format: {}", e.getMessage());
             throw new RuntimeException("Invalid message format: " + e.getMessage(), e);
         } catch (IllegalArgumentException e) {
-            // Pass through validation errors
             log.error("Validation error: {}", e.getMessage());
             throw new RuntimeException(e.getMessage(), e);
         } catch (Exception e) {
@@ -92,6 +96,13 @@ public class ShootingStarService {
                 .orElseThrow(() -> new IllegalArgumentException("No star found on world " + message.world()));
 
         log.info("Star on world {} poofed at tier {}", message.world(), star.getTier());
+
+        // Record the poof event
+        PoofEvent poofEvent = new PoofEvent(star);
+        poofEventRepository.save(poofEvent);
+        log.info("Poof event recorded for world {} at tier {}", message.world(), star.getTier());
+
+        // Remove the star from active tracking
         repository.delete(star);
     }
 
