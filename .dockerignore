@@ -6,6 +6,3 @@ build/
 *.iml
 README.md
 .env
-gradle-wrapper.jar
-gradlew
-gradlew.bat
