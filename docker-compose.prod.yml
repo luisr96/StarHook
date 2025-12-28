@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  app:
+    image: starhook:latest
+    container_name: starhook-app
+    environment:
+      DATABASE_URL: jdbc:postgresql://localhost:5432/starhook
+      DATABASE_USER: starhook_user
+      DATABASE_PASSWORD: ${DB_PASSWORD}
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    network_mode: "host"
