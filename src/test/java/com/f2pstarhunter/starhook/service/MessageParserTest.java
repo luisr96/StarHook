@@ -129,4 +129,97 @@ class MessageParserTest {
 
         assertTrue(exception.getMessage().contains("Invalid format"));
     }
+
+    @Test
+    void testLocationBeforeTier() throws Exception {
+        ParsedMessage result = parser.parse("379 lse t5");
+
+        assertEquals(MessageType.SPOTTED, result.type());
+        assertEquals(379, result.world());
+        assertEquals(5, result.tier());
+        assertEquals("lse", result.location());
+    }
+
+    @Test
+    void testLocationAfterTier() throws Exception {
+        ParsedMessage result = parser.parse("379 t5 lse");
+
+        assertEquals(MessageType.SPOTTED, result.type());
+        assertEquals(379, result.world());
+        assertEquals(5, result.tier());
+        assertEquals("lse", result.location());
+    }
+
+    @Test
+    void testTierBeforeWorld() throws Exception {
+        ParsedMessage result = parser.parse("t6 335 vb");
+
+        assertEquals(MessageType.SPOTTED, result.type());
+        assertEquals(335, result.world());
+        assertEquals(6, result.tier());
+        assertEquals("vb", result.location());
+    }
+
+    @Test
+    void testLocationFirst() throws Exception {
+        ParsedMessage result = parser.parse("vsw 445 t6");
+
+        assertEquals(MessageType.SPOTTED, result.type());
+        assertEquals(445, result.world());
+        assertEquals(6, result.tier());
+        assertEquals("vsw", result.location());
+    }
+
+    @Test
+    void testIgnoreTotalWorlds() throws Exception {
+        ParsedMessage result = parser.parse("vsw 445 t6 (500ttl)");
+
+        assertEquals(MessageType.SPOTTED, result.type());
+        assertEquals(445, result.world());
+        assertEquals(6, result.tier());
+        assertEquals("vsw", result.location());
+    }
+
+    @Test
+    void testLocationNormalizationAKB() throws Exception {
+        ParsedMessage result1 = parser.parse("335 t6 akb");
+        ParsedMessage result2 = parser.parse("335 t6 al kharid bank");
+        ParsedMessage result3 = parser.parse("335 t6 Al Kharid east bank");
+
+        assertEquals("akb", result1.location());
+        assertEquals("akb", result2.location());
+        assertEquals("akb", result3.location());
+    }
+
+    @Test
+    void testLocationNormalizationVB() throws Exception {
+        ParsedMessage result1 = parser.parse("335 t6 vb");
+        ParsedMessage result2 = parser.parse("335 t6 varrock bank");
+        ParsedMessage result3 = parser.parse("335 t6 Varrock east bank");
+
+        assertEquals("vb", result1.location());
+        assertEquals("vb", result2.location());
+        assertEquals("vb", result3.location());
+    }
+
+    @Test
+    void testLocationNormalizationCaseInsensitive() throws Exception {
+        ParsedMessage result1 = parser.parse("419 t3 VSE");
+        ParsedMessage result2 = parser.parse("419 t3 vse");
+        ParsedMessage result3 = parser.parse("419 t3 VsE");
+
+        assertEquals("vse", result1.location());
+        assertEquals("vse", result2.location());
+        assertEquals("vse", result3.location());
+    }
+
+    @Test
+    void testUnknownLocationIgnored() throws Exception {
+        ParsedMessage result = parser.parse("335 t6 v");
+
+        assertEquals(MessageType.SPOTTED, result.type());
+        assertEquals(335, result.world());
+        assertEquals(6, result.tier());
+        assertNull(result.location());
+    }
 }

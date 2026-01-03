@@ -5,16 +5,49 @@ import com.f2pstarhunter.starhook.model.MessageType;
 import com.f2pstarhunter.starhook.model.ParsedMessage;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Component
 public class MessageParser {
 
-    private static final Pattern TIER_FIRST = Pattern.compile("^T(\\d+)\\s+w?(\\d+)(?:\\s+(.+))?$", Pattern.CASE_INSENSITIVE);
-    private static final Pattern WORLD_FIRST = Pattern.compile("^w?(\\d+)\\s+T(\\d+)(?:\\s+(.+))?$", Pattern.CASE_INSENSITIVE);
+    private static final Map<String, String> LOCATION_ALIASES = new HashMap<>();
+
+    static {
+        addLocation("akb", "al kharid bank", "al kharid east bank");
+        addLocation("akm", "al kharid mine");
+        addLocation("apa", "al kharid duel arena");
+        addLocation("ccb", "corsair cove bank");
+        addLocation("ccr", "corsair resource area");
+        addLocation("cg", "crafting guild");
+        addLocation("dray", "draynor village", "draynor");
+        addLocation("fb", "falador bank", "falador east bank");
+        addLocation("ice", "ice mountain");
+        addLocation("lse", "lumbridge southeast mine", "lumbridge southeast");
+        addLocation("lsw", "lumbridge southwest mine", "lumbridge southwest");
+        addLocation("nc", "north crandor");
+        addLocation("sc", "south crandor");
+        addLocation("vb", "varrock east bank", "varrock bank");
+        addLocation("vse", "varrock southeast mine", "varrock southeast");
+        addLocation("vsw", "varrock southwest mine", "varrock southwest");
+        addLocation("rim", "rimmington mine", "rimmington");
+    }
+
+    private static void addLocation(String canonical, String... aliases) {
+        LOCATION_ALIASES.put(canonical.toLowerCase(), canonical);
+        for (String alias : aliases) {
+            LOCATION_ALIASES.put(alias.toLowerCase(), canonical);
+        }
+    }
+
     private static final Pattern DUST = Pattern.compile("^w?(\\d+)\\s+dust$", Pattern.CASE_INSENSITIVE);
     private static final Pattern POOF = Pattern.compile("^w?(\\d+)\\s+poof$", Pattern.CASE_INSENSITIVE);
+    // 3-digit world number with optional 'w' prefix
+    private static final Pattern WORLD_PATTERN = Pattern.compile("w?(\\d{3})\\b", Pattern.CASE_INSENSITIVE);
+    // 1-digit tier with 't' prefix
+    private static final Pattern TIER_PATTERN = Pattern.compile("t(\\d+)\\b", Pattern.CASE_INSENSITIVE);
 
     public ParsedMessage parse(String message) throws InvalidMessageException {
         String trimmed = message.trim();
@@ -30,25 +63,48 @@ public class MessageParser {
             return new ParsedMessage(MessageType.DISAPPEARED, null, parseWorld(m.group(1)), null);
         }
 
-        // Check for tier-first message
-        m = TIER_FIRST.matcher(trimmed);
-        if (m.matches()) {
-            int tier = parseTier(m.group(1));
-            int world = parseWorld(m.group(2));
-            String location = m.group(3) != null ? m.group(3).trim() : null;
-            return new ParsedMessage(MessageType.SPOTTED, tier, world, location);
+        Integer world = extractWorld(trimmed);
+        Integer tier = extractTier(trimmed);
+        String location = findLocation(trimmed);
+
+        if (world == null || tier == null) {
+            throw new InvalidMessageException("Invalid format. Expected: 'T{tier} W{world} [location]', 'W{world} dust', or 'W{world} poof'");
         }
 
-        // Check for world-first message
-        m = WORLD_FIRST.matcher(trimmed);
-        if (m.matches()) {
-            int world = parseWorld(m.group(1));
-            int tier = parseTier(m.group(2));
-            String location = m.group(3) != null ? m.group(3).trim() : null;
-            return new ParsedMessage(MessageType.SPOTTED, tier, world, location);
-        }
+        return new ParsedMessage(MessageType.SPOTTED, tier, world, location);
+    }
 
-        throw new InvalidMessageException("Invalid format. Expected: 'T{tier} w{world} [location]', 'w{world} dust', or 'w{world} poof'");
+    private Integer extractWorld(String text) throws InvalidMessageException {
+        Matcher m = WORLD_PATTERN.matcher(text);
+        if (m.find()) {
+            return parseWorld(m.group(1));
+        }
+        return null;
+    }
+
+    private Integer extractTier(String text) throws InvalidMessageException {
+        Matcher m = TIER_PATTERN.matcher(text);
+        if (m.find()) {
+            return parseTier(m.group(1));
+        }
+        return null;
+    }
+
+    private String findLocation(String text) {
+        String lowerText = text.toLowerCase();
+
+        // Try to find any known location or alias in the text
+        // Sort by length for matching e.g. "al kharid bank" before "akb"
+        return LOCATION_ALIASES.keySet().stream()
+                .sorted((a, b) -> Integer.compare(b.length(), a.length()))
+                .filter(alias -> {
+                    // Check if this alias appears as a word/phrase in the text
+                    String pattern = "\\b" + Pattern.quote(alias) + "\\b";
+                    return lowerText.matches(".*" + pattern + ".*");
+                })
+                .map(LOCATION_ALIASES::get) // Get canonical name
+                .findFirst()
+                .orElse(null);
     }
 
     private int parseTier(String tierStr) throws InvalidMessageException {
