@@ -22,16 +22,19 @@ public class ShootingStarService {
     private final ShootingStarRepository repository;
     private final PoofEventRepository poofEventRepository;
     private final MessageParser messageParser;
+    private final ScoutingService scoutingService;
 
     public ShootingStarService(
             ObjectMapper objectMapper,
             ShootingStarRepository repository,
             PoofEventRepository poofEventRepository,
-            MessageParser messageParser) {
+            MessageParser messageParser,
+            ScoutingService scoutingService) {
         this.objectMapper = objectMapper;
         this.repository = repository;
         this.poofEventRepository = poofEventRepository;
         this.messageParser = messageParser;
+        this.scoutingService = scoutingService;
     }
 
     @Transactional
@@ -44,6 +47,9 @@ public class ShootingStarService {
                 case SPOTTED -> handleStarSpotted(message, payload);
                 case DEPLETED -> handleStarDepleted(message);
                 case DISAPPEARED -> handleStarDisappeared(message);
+                case SCOUTING_CLAIMED -> scoutingService.handleScoutingClaim(message, payload.source());
+                case SCOUTING_COMPLETED -> scoutingService.handleScoutingComplete(message, payload.source());
+                case WAVE_END -> scoutingService.handleWaveEnd();
             }
         } catch (InvalidMessageException e) {
             log.error("Invalid message format: {}", e.getMessage());

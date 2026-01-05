@@ -9,7 +9,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 @Service
 public class CleanupService {
@@ -33,7 +34,7 @@ public class CleanupService {
     @Scheduled(fixedRateString = "${cleanup.star.schedule-rate:300000}")
     @Transactional
     public void cleanupExpiredStars() {
-        LocalDateTime expiryTime = LocalDateTime.now().minusMinutes(starExpiryMinutes);
+        Instant expiryTime = Instant.now().minus(starExpiryMinutes, ChronoUnit.MINUTES);
 
         int deletedCount = starRepository.deleteByFirstSeenAtBefore(expiryTime);
 
@@ -45,7 +46,7 @@ public class CleanupService {
     @Scheduled(fixedRateString = "${cleanup.poof-event.schedule-rate:3600000}")
     @Transactional
     public void cleanupOldPoofEvents() {
-        LocalDateTime expiryTime = LocalDateTime.now().minusHours(poofEventExpiryHours);
+        Instant expiryTime = Instant.now().minus(poofEventExpiryHours, ChronoUnit.HOURS);
 
         int deletedCount = poofEventRepository.deleteByPoofedAtBefore(expiryTime);
 

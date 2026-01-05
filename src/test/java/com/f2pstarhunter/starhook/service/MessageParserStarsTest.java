@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @ActiveProfiles("test")
-class MessageParserTest {
+class MessageParserStarsTest {
 
     private final MessageParser parser = new MessageParser();
 

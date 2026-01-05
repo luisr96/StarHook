@@ -11,7 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -219,7 +219,7 @@ class ShootingStarServiceIntegrationTest {
         service.processWebhook(params1);
 
         ShootingStar star = repository.findByWorld(444).orElseThrow();
-        LocalDateTime firstSeenAt = star.getFirstSeenAt();
+        Instant firstSeenAt = star.getFirstSeenAt();
 
         // Small delay to ensure different timestamp
         Thread.sleep(10);

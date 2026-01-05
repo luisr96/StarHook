@@ -9,6 +9,7 @@ services:
       DATABASE_USER: starhook_user
       DATABASE_PASSWORD: ${DB_PASSWORD}
       PORT: 8080
+      CORS_ALLOWED_ORIGINS: https://starmap.luisramirez.site,https://starhook.luisramirez.site,https://luisr96.github.io
     ports:
       - "8080:8080"
     restart: unless-stopped

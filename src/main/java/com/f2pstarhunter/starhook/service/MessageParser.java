@@ -14,8 +14,10 @@ import java.util.regex.Pattern;
 public class MessageParser {
 
     private static final Map<String, String> LOCATION_ALIASES = new HashMap<>();
+    private static final Map<String, String> SCOUTING_LOCATION_ALIASES = new HashMap<>();
 
     static {
+        // Star locations
         addLocation("akb", "al kharid bank", "al kharid east bank");
         addLocation("akm", "al kharid mine");
         addLocation("apa", "al kharid duel arena");
@@ -33,6 +35,23 @@ public class MessageParser {
         addLocation("vse", "varrock southeast mine", "varrock southeast");
         addLocation("vsw", "varrock southwest mine", "varrock southwest");
         addLocation("rim", "rimmington mine", "rimmington");
+
+        // Scouting locations
+        addScoutingLocation("cg/rim", "cg/rim", "rim/cg", "cg", "rim");
+        addScoutingLocation("akm/apa", "akm/apa", "apa/akm", "akm", "apa", "duel");
+        addScoutingLocation("vb", "vb");
+        addScoutingLocation("vse", "vse");
+        addScoutingLocation("akb", "akb");
+        addScoutingLocation("lse", "lse");
+        addScoutingLocation("lsw", "lsw");
+        addScoutingLocation("ccr/mg", "ccr/mg", "mg/ccr", "ccr");
+        addScoutingLocation("sc", "sc");
+        addScoutingLocation("nc", "nc");
+        addScoutingLocation("ice", "ice");
+        addScoutingLocation("fb", "fb", "fally");
+        addScoutingLocation("ccb", "ccb");
+        addScoutingLocation("dray", "dray");
+        addScoutingLocation("uzer", "uzer");
     }
 
     private static void addLocation(String canonical, String... aliases) {
@@ -42,17 +61,52 @@ public class MessageParser {
         }
     }
 
+    private static void addScoutingLocation(String canonicalId, String... aliases) {
+        for (String alias : aliases) {
+            SCOUTING_LOCATION_ALIASES.put(alias.toLowerCase(), canonicalId);
+        }
+    }
+
     private static final Pattern DUST = Pattern.compile("^w?(\\d+)\\s+dust$", Pattern.CASE_INSENSITIVE);
     private static final Pattern POOF = Pattern.compile("^w?(\\d+)\\s+poof$", Pattern.CASE_INSENSITIVE);
-    // 3-digit world number with optional 'w' prefix
+    private static final Pattern SCOUTING = Pattern.compile("^scouting\\s+(.+)$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern CLEAR = Pattern.compile("^(.+)\\s+clear$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern WAVE_END = Pattern.compile("^wave\\s+end$", Pattern.CASE_INSENSITIVE);
+
     private static final Pattern WORLD_PATTERN = Pattern.compile("w?(\\d{3})\\b", Pattern.CASE_INSENSITIVE);
-    // 1-digit tier with 't' prefix
     private static final Pattern TIER_PATTERN = Pattern.compile("t(\\d+)\\b", Pattern.CASE_INSENSITIVE);
 
     public ParsedMessage parse(String message) throws InvalidMessageException {
         String trimmed = message.trim();
 
-        // Check for dust/poof first
+        // Check for wave end
+        if (WAVE_END.matcher(trimmed).matches()) {
+            return ParsedMessage.forScouting(MessageType.WAVE_END, null);
+        }
+
+        // Check for scouting claim
+        Matcher scoutingMatcher = SCOUTING.matcher(trimmed);
+        if (scoutingMatcher.matches()) {
+            String locationStr = scoutingMatcher.group(1).trim();
+            String locationId = findScoutingLocation(locationStr);
+            if (locationId == null) {
+                throw new InvalidMessageException("Unknown scouting location: " + locationStr);
+            }
+            return ParsedMessage.forScouting(MessageType.SCOUTING_CLAIMED, locationId);
+        }
+
+        // Check for scouting completion
+        Matcher clearMatcher = CLEAR.matcher(trimmed);
+        if (clearMatcher.matches()) {
+            String locationStr = clearMatcher.group(1).trim();
+            String locationId = findScoutingLocation(locationStr);
+            if (locationId == null) {
+                throw new InvalidMessageException("Unknown scouting location: " + locationStr);
+            }
+            return ParsedMessage.forScouting(MessageType.SCOUTING_COMPLETED, locationId);
+        }
+
+        // Check for dust/poof
         Matcher m = DUST.matcher(trimmed);
         if (m.matches()) {
             return new ParsedMessage(MessageType.DEPLETED, null, parseWorld(m.group(1)), null);
@@ -63,15 +117,30 @@ public class MessageParser {
             return new ParsedMessage(MessageType.DISAPPEARED, null, parseWorld(m.group(1)), null);
         }
 
+        // Extract world, tier, and location
         Integer world = extractWorld(trimmed);
         Integer tier = extractTier(trimmed);
         String location = findLocation(trimmed);
 
         if (world == null || tier == null) {
-            throw new InvalidMessageException("Invalid format. Expected: 'T{tier} W{world} [location]', 'W{world} dust', or 'W{world} poof'");
+            throw new InvalidMessageException("Invalid format. Expected: 'T{tier} w{world} [location]', 'w{world} dust', or 'w{world} poof'");
         }
 
         return new ParsedMessage(MessageType.SPOTTED, tier, world, location);
+    }
+
+    private String findScoutingLocation(String text) {
+        String lowerText = text.toLowerCase();
+
+        return SCOUTING_LOCATION_ALIASES.keySet().stream()
+                .sorted((a, b) -> Integer.compare(b.length(), a.length()))
+                .filter(alias -> {
+                    String pattern = "\\b" + Pattern.quote(alias) + "\\b";
+                    return lowerText.matches(".*" + pattern + ".*");
+                })
+                .map(SCOUTING_LOCATION_ALIASES::get)
+                .findFirst()
+                .orElse(null);
     }
 
     private Integer extractWorld(String text) throws InvalidMessageException {
@@ -93,16 +162,13 @@ public class MessageParser {
     private String findLocation(String text) {
         String lowerText = text.toLowerCase();
 
-        // Try to find any known location or alias in the text
-        // Sort by length for matching e.g. "al kharid bank" before "akb"
         return LOCATION_ALIASES.keySet().stream()
                 .sorted((a, b) -> Integer.compare(b.length(), a.length()))
                 .filter(alias -> {
-                    // Check if this alias appears as a word/phrase in the text
                     String pattern = "\\b" + Pattern.quote(alias) + "\\b";
                     return lowerText.matches(".*" + pattern + ".*");
                 })
-                .map(LOCATION_ALIASES::get) // Get canonical name
+                .map(LOCATION_ALIASES::get)
                 .findFirst()
                 .orElse(null);
     }

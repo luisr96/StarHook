@@ -7,7 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.jpa.repository.Modifying;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Repository
@@ -20,10 +20,10 @@ public interface PoofEventRepository extends JpaRepository<PoofEvent, Long> {
     List<PoofEvent> findTop100ByOrderByPoofedAtDesc();
 
     // Find poof events after a certain time
-    List<PoofEvent> findByPoofedAtAfter(LocalDateTime dateTime);
+    List<PoofEvent> findByPoofedAtAfter(Instant dateTime);
 
     // Get poof events within a time range
-    List<PoofEvent> findByPoofedAtBetween(LocalDateTime start, LocalDateTime end);
+    List<PoofEvent> findByPoofedAtBetween(Instant start, Instant end);
 
     @Query("SELECT TIMESTAMPDIFF(MINUTE, p.firstSeenAt, p.poofedAt) FROM PoofEvent p")
     List<Long> findAllLifespansInMinutes();
@@ -31,5 +31,5 @@ public interface PoofEventRepository extends JpaRepository<PoofEvent, Long> {
     // Delete poof events older than the given time
     @Modifying
     @Query("DELETE FROM PoofEvent p WHERE p.poofedAt < :expiryTime")
-    int deleteByPoofedAtBefore(@Param("expiryTime") LocalDateTime expiryTime);
+    int deleteByPoofedAtBefore(@Param("expiryTime") Instant expiryTime);
 }

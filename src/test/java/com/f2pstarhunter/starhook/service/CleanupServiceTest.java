@@ -11,7 +11,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -46,7 +47,7 @@ class CleanupServiceTest {
         starRepository.save(oldStar);
 
         // Update the timestamp to simulate an old star
-        oldStar.setFirstSeenAt(LocalDateTime.now().minusMinutes(100));
+        oldStar.setFirstSeenAt(Instant.now().minus(100, ChronoUnit.MINUTES));
         starRepository.save(oldStar);
 
         assertEquals(2, starRepository.count());
@@ -69,8 +70,8 @@ class CleanupServiceTest {
         recentPoof.setLocation("varrock");
         recentPoof.setType("Type1");
         recentPoof.setSource("Source1");
-        recentPoof.setFirstSeenAt(LocalDateTime.now().minusMinutes(60));
-        recentPoof.setPoofedAt(LocalDateTime.now());
+        recentPoof.setFirstSeenAt(Instant.now().minus(60, ChronoUnit.MINUTES));
+        recentPoof.setPoofedAt(Instant.now());
         poofEventRepository.save(recentPoof);
 
         // Create an old poof event (should be deleted)
@@ -80,8 +81,8 @@ class CleanupServiceTest {
         oldPoof.setLocation("lumbridge");
         oldPoof.setType("Type1");
         oldPoof.setSource("Source1");
-        oldPoof.setFirstSeenAt(LocalDateTime.now().minusHours(26));
-        oldPoof.setPoofedAt(LocalDateTime.now().minusHours(25)); // 25 hours ago
+        oldPoof.setFirstSeenAt(Instant.now().minus(26, ChronoUnit.HOURS));
+        oldPoof.setPoofedAt(Instant.now().minus(25, ChronoUnit.HOURS)); // 25 hours ago
         poofEventRepository.save(oldPoof);
 
         assertEquals(2, poofEventRepository.count());

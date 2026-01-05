@@ -6,7 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "shooting_stars")
@@ -36,13 +36,13 @@ public class ShootingStar {
     private String location;
 
     @Column(nullable = false)
-    private LocalDateTime firstSeenAt;
+    private Instant firstSeenAt;
 
     @Column(nullable = false)
-    private LocalDateTime lastUpdatedAt;
+    private Instant lastUpdatedAt;
 
     @Column
-    private LocalDateTime poofedAt;  // Only set when it randomly disappears
+    private Instant poofedAt;  // Only set when it randomly disappears
 
     public ShootingStar(String type, String source, Integer tier, Integer world, String location) {
         this.type = type;
@@ -50,8 +50,8 @@ public class ShootingStar {
         this.tier = tier;
         this.world = world;
         this.location = location;
-        this.firstSeenAt = LocalDateTime.now();
-        this.lastUpdatedAt = LocalDateTime.now();
+        this.firstSeenAt = Instant.now();
+        this.lastUpdatedAt = Instant.now();
     }
 
     public void update(Integer newTier, String newLocation, String newType, String newSource) {
@@ -59,6 +59,6 @@ public class ShootingStar {
         if (newLocation != null && !newLocation.isEmpty()) this.location = newLocation;
         this.type = newType;
         this.source = newSource;
-        this.lastUpdatedAt = LocalDateTime.now();
+        this.lastUpdatedAt = Instant.now();
     }
 }

@@ -6,7 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "poof_events")
@@ -30,10 +30,10 @@ public class PoofEvent {
     private String location;
 
     @Column(nullable = false)
-    private LocalDateTime poofedAt;
+    private Instant poofedAt;
 
     @Column(nullable = false)
-    private LocalDateTime firstSeenAt;  // When the star was first spotted
+    private Instant firstSeenAt;  // When the star was first spotted
 
     @Column(nullable = false)
     private String type;
@@ -45,7 +45,7 @@ public class PoofEvent {
         this.world = star.getWorld();
         this.tier = star.getTier();
         this.location = star.getLocation();
-        this.poofedAt = LocalDateTime.now();
+        this.poofedAt = Instant.now();
         this.firstSeenAt = star.getFirstSeenAt();
         this.type = star.getType();
         this.source = star.getSource();

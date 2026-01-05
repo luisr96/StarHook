@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -16,11 +17,11 @@ public interface ShootingStarRepository extends JpaRepository<ShootingStar, Long
 
     Optional<ShootingStar> findByWorld(Integer world);
 
-    List<ShootingStar> findByLastUpdatedAtAfter(LocalDateTime dateTime);
+    List<ShootingStar> findByLastUpdatedAtAfter(Instant dateTime);
 
     List<ShootingStar> findTop10ByOrderByLastUpdatedAtDesc();
 
     @Modifying
     @Query("DELETE FROM ShootingStar s WHERE s.firstSeenAt < :expiryTime")
-    int deleteByFirstSeenAtBefore(@Param("expiryTime") LocalDateTime expiryTime);
+    int deleteByFirstSeenAtBefore(@Param("expiryTime") Instant expiryTime);
 }
